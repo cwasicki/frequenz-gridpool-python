@@ -6,6 +6,7 @@
 import logging
 import tomllib
 from dataclasses import field
+from datetime import date
 from pathlib import Path
 from typing import Any, ClassVar, Self, Type
 
@@ -14,6 +15,7 @@ from marshmallow import Schema
 from marshmallow_dataclass import dataclass
 
 from .microgrid import MicrogridConfig
+from .topology import MarketLocationConfig
 
 _logger = logging.getLogger(__name__)
 
@@ -24,6 +26,9 @@ class AssetsConfig:
 
     microgrids: dict[str, MicrogridConfig] = field(default_factory=dict)
     """Microgrids, keyed by microgrid ID."""
+
+    market_locations: dict[str, MarketLocationConfig] = field(default_factory=dict)
+    """Market locations, keyed by their identifier."""
 
     class Meta:
         """Ignore entity tables this version does not know about.
@@ -52,6 +57,106 @@ class AssetsConfig:
                 raise ValueError(
                     f"Microgrid ID mismatch: key {mid} != {cfg.meta.microgrid_id}"
                 )
+
+    def market_location(self, market_location_id: str) -> MarketLocationConfig:
+        """Get how to read a market location identifier.
+
+        Args:
+            market_location_id: The identifier, as used elsewhere.
+
+        Returns:
+            Its entry, or one with the defaults when the document has none.
+        """
+        return self.market_locations.get(market_location_id, MarketLocationConfig())
+
+    def market_locations_of(
+        self, microgrid_id: int, at: date | None = None
+    ) -> list[str]:
+        """Find the market locations metering a microgrid.
+
+        Args:
+            microgrid_id: The microgrid to look up.
+            at: Day to read the links on, or `None` for the latest.
+
+        Returns:
+            Their identifiers, in document order.
+        """
+        return [
+            key
+            for key, location in self.market_locations.items()
+            if location.microgrid(at) == microgrid_id
+        ]
+
+    def gridpool_of(self, microgrid_id: int, at: date | None = None) -> int | None:
+        """Find the gridpool a microgrid takes part in.
+
+        The link sits on the market locations metering the microgrid, and on the
+        microgrid itself when none does, so both have to be consulted.
+
+        Args:
+            microgrid_id: The microgrid to look up.
+            at: Day to read the links on, or `None` for the latest.
+
+        Returns:
+            The gridpool ID, or `None` when nothing names one.
+
+        Raises:
+            ValueError: If the market locations of the microgrid name different
+                gridpools, which no single value can answer.
+        """
+        found = {
+            self.market_location(key).gridpool(at)
+            for key in self.market_locations_of(microgrid_id, at)
+        } - {None}
+        if len(found) > 1:
+            raise ValueError(
+                f"Microgrid {microgrid_id}: its market locations name gridpools "
+                f"{sorted(str(gid) for gid in found)}"
+            )
+        if found:
+            return found.pop()
+        microgrid = self.microgrids.get(str(microgrid_id))
+        return microgrid.meta.gridpool(at) if microgrid else None
+
+    def delivery_area_of(self, microgrid_id: int, at: date | None = None) -> str | None:
+        """Find the grid zone a microgrid sits in.
+
+        Args:
+            microgrid_id: The microgrid to look up.
+            at: Day to read the links on, or `None` for the latest.
+
+        Returns:
+            The zone, from a market location metering it, or from the microgrid
+            itself when none does.
+        """
+        for key in self.market_locations_of(microgrid_id, at):
+            area = self.market_location(key).delivery_area
+            if area is not None:
+                return area
+        microgrid = self.microgrids.get(str(microgrid_id))
+        return microgrid.meta.delivery_area if microgrid else None
+
+    def enterprise_of(self, microgrid_id: int, at: date | None = None) -> int | None:
+        """Find the enterprise a microgrid belongs to.
+
+        Args:
+            microgrid_id: The microgrid to look up.
+            at: Day to read the links on, or `None` for the latest.
+
+        Returns:
+            The enterprise ID, from the microgrid itself or from a market
+            location metering it.
+        """
+        microgrid = self.microgrids.get(str(microgrid_id))
+        if microgrid is not None:
+            owner = microgrid.meta.enterprise(at)
+            if owner is not None:
+                return owner
+        for key in self.market_locations_of(microgrid_id, at):
+            owner = self.market_location(key).enterprise(at)
+            if owner is not None:
+                return owner
+        return None
 
     @classmethod
     def _warn_unknown_entities(cls, assets: dict[str, Any], source: Path) -> None:

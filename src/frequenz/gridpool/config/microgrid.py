@@ -7,13 +7,20 @@ import logging
 import re
 from copy import deepcopy
 from dataclasses import field
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, ClassVar, Literal, Self, Type, cast, get_args
 
 from marshmallow import Schema
 from marshmallow_dataclass import dataclass
 
+from .topology import TimedRef, check_periods, resolve
+
 _logger = logging.getLogger(__name__)
+
+
+def _as_day(at: "datetime | date | None") -> date | None:
+    """Read a day out of whatever the caller passed."""
+    return at.date() if isinstance(at, datetime) else at
 
 
 ComponentType = Literal["grid", "pv", "battery", "consumption", "chp", "ev"]
@@ -188,6 +195,12 @@ class Metadata:
     gid: int | None = None
     """Gridpool ID of the microgrid."""
 
+    gridpools: dict[str, TimedRef] = field(default_factory=dict)
+    """Gridpools it took part in over time, replacing `gid`."""
+
+    enterprises: dict[str, TimedRef] = field(default_factory=dict)
+    """Enterprises it belonged to over time, replacing `enterprise_id`."""
+
     delivery_area: str | None = None
     """Delivery area of the microgrid."""
 
@@ -205,6 +218,33 @@ class Metadata:
 
     end_time: datetime | None = None
     """End time of the microgrid operation."""
+
+    def __post_init__(self) -> None:
+        """Check the period forms of the links, via `check_periods`."""
+        check_periods("gridpool", self.gid, self.gridpools)
+        check_periods("enterprise", self.enterprise_id, self.enterprises)
+
+    def gridpool(self, at: datetime | date | None = None) -> int | None:
+        """Get the gridpool this microgrid takes part in.
+
+        Args:
+            at: Day to read the link on, or `None` for the latest.
+
+        Returns:
+            The gridpool ID, or `None` when the microgrid names none.
+        """
+        return resolve(self.gid, self.gridpools, _as_day(at))
+
+    def enterprise(self, at: datetime | date | None = None) -> int | None:
+        """Get the enterprise this microgrid belongs to.
+
+        Args:
+            at: Day to read the link on, or `None` for the latest.
+
+        Returns:
+            The enterprise ID, or `None` when the microgrid names none.
+        """
+        return resolve(self.enterprise_id, self.enterprises, _as_day(at))
 
 
 @dataclass
