@@ -225,7 +225,7 @@ def test_load_mixed_layouts_rejected(tmp_path: Path) -> None:
 
 def test_load_assets_without_microgrids(tmp_path: Path) -> None:
     """An `assets` table without microgrids yields no configs and no warning."""
-    path = _write(tmp_path, "other.toml", 'assets.gridpool.7.name = "GP"\n')
+    path = _write(tmp_path, "other.toml", 'assets.substations.7.name = "SUB"\n')
 
     assert not AssetsConfig.load_from_file(path).microgrids
 
@@ -256,11 +256,11 @@ def test_assets_config_warns_on_unknown_entities(
 ) -> None:
     """Entity tables this version does not know are skipped, but reported."""
     path = _write(
-        tmp_path, "future.toml", _PREFIXED_TOML + 'assets.gridpool.7.name = "GP"\n'
+        tmp_path, "future.toml", _PREFIXED_TOML + 'assets.substations.7.name = "SUB"\n'
     )
 
     with caplog.at_level(logging.WARNING):
         config = AssetsConfig.load_from_file(path)
 
     assert sorted(config.microgrids) == ["1"]
-    assert "gridpool" in caplog.text
+    assert "substations" in caplog.text

@@ -7,6 +7,7 @@ from frequenz.microgrid_component_graph import ComponentGraphConfig, FormulaOver
 
 from .assets import AssetsConfig
 from .load import (
+    load_assets_from_files,
     load_configs,
     load_configs_from_api,
     load_configs_from_files,
@@ -23,22 +24,33 @@ from .microgrid import (
     merge_config_maps,
     merge_microgrid_configs,
 )
+from .topology import (
+    MarketLocationConfig,
+    RelationConfig,
+    ValidityConfig,
+    relation_key,
+)
 
 __all__ = [
+    "AssetsConfig",
     "BatteryConfig",
     "ComponentCategory",
     "ComponentGraphConfig",
     "ComponentType",
     "ComponentTypeConfig",
     "FormulaOverrides",
+    "MarketLocationConfig",
     "Metadata",
-    "AssetsConfig",
     "MicrogridConfig",
     "PVConfig",
+    "RelationConfig",
+    "ValidityConfig",
     "WindConfig",
+    "load_assets_from_files",
     "load_configs",
     "load_configs_from_api",
     "load_configs_from_files",
     "merge_config_maps",
     "merge_microgrid_configs",
+    "relation_key",
 ]

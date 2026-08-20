@@ -336,6 +336,30 @@ class MicrogridConfig:
         return mgrids
 
 
+def deep_merge(a: dict[Any, Any], b: dict[Any, Any]) -> dict[Any, Any]:
+    """Merge two dumped configs, with *b* taking precedence.
+
+    A `None` in *b* keeps the value from *a*, so a partial override never
+    nullifies existing data.
+
+    Args:
+        a: The base mapping.
+        b: The overriding mapping.
+
+    Returns:
+        A new mapping representing the merged result.
+    """
+    result = deepcopy(a)
+    for k, v in b.items():
+        if v is None:
+            continue
+        if isinstance(v, dict) and isinstance(result.get(k), dict):
+            result[k] = deep_merge(result[k], v)
+        else:
+            result[k] = v
+    return result
+
+
 def merge_microgrid_configs(
     base: MicrogridConfig,
     override: MicrogridConfig,
@@ -354,21 +378,7 @@ def merge_microgrid_configs(
         A new MicrogridConfig representing the merged result.
     """
     schema = MicrogridConfig.Schema()
-    base_dict = schema.dump(base)
-    override_dict = schema.dump(override)
-
-    def _deep_merge(a: dict[Any, Any], b: dict[Any, Any]) -> dict[Any, Any]:
-        result = deepcopy(a)
-        for k, v in b.items():
-            if v is None:
-                continue
-            if isinstance(v, dict) and isinstance(result.get(k), dict):
-                result[k] = _deep_merge(result[k], v)
-            else:
-                result[k] = v
-        return result
-
-    merged = schema.load(_deep_merge(base_dict, override_dict))
+    merged = schema.load(deep_merge(schema.dump(base), schema.dump(override)))
     assert isinstance(merged, MicrogridConfig)
     return merged
 
