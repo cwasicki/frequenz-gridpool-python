@@ -126,7 +126,9 @@ async def load_configs(
         )
         schema = MicrogridConfig.Schema()
         api_table: dict[str, Any] = {
-            "microgrids": {mid: schema.dump(cfg) for mid, cfg in assets_configs.items()}
+            "microgrids": {
+                str(mid): schema.dump(cfg) for mid, cfg in assets_configs.items()
+            }
         }
         merged = _deep_merge(merged, api_table)
 
@@ -142,7 +144,7 @@ async def _load_microgrids_from_api(
     assets_client: AssetsApiClient,
     microgrid_ids: list[int],
     component_graph_config: ComponentGraphConfig | None = None,
-) -> dict[str, "MicrogridConfig"]:
+) -> dict[int, "MicrogridConfig"]:
     """Load microgrid configs from the Assets API.
 
     For each microgrid, fetches its location metadata (latitude, longitude) and
@@ -165,14 +167,13 @@ async def _load_microgrids_from_api(
             `ComponentGraphConfig`.  Defaults to that class's own defaults.
 
     Returns:
-        dict[str, MicrogridConfig]:
-            Mapping from microgrid ID (as string) to the loaded
-            `MicrogridConfig` instance. Microgrids whose metadata could not be
-            loaded are omitted, so the returned mapping may cover fewer
-            microgrids than were requested.
+        dict[int, MicrogridConfig]:
+            Mapping from microgrid ID to the loaded `MicrogridConfig` instance.
+            Microgrids whose metadata could not be loaded are omitted, so the
+            returned mapping may cover fewer microgrids than were requested.
     """
     generator = ComponentGraphGenerator(assets_client, config=component_graph_config)
-    configs: dict[str, MicrogridConfig] = {}
+    configs: dict[int, MicrogridConfig] = {}
     for microgrid_id in microgrid_ids:
         try:
             cfg = await _build_config_from_metadata(assets_client, microgrid_id)
@@ -195,7 +196,7 @@ async def _load_microgrids_from_api(
                 exc,
             )
 
-        configs[str(microgrid_id)] = cfg
+        configs[microgrid_id] = cfg
 
     return configs
 

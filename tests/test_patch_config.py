@@ -28,7 +28,7 @@ _ORIGINAL = """# EID 6 TOML configuration
 def test_patch_is_a_noop_when_nothing_changed() -> None:
     """Patching with values already on disk leaves the file byte-identical."""
     configs = {
-        "40": MicrogridConfig(
+        40: MicrogridConfig(
             meta=Metadata(microgrid_id=40, latitude=50.39567065),
             pv={"1": PVConfig(peak_power=616_140.0, rated_power=480_000.0)},
         )
@@ -40,7 +40,7 @@ def test_patch_is_a_noop_when_nothing_changed() -> None:
 def test_patch_inserts_missing_leaf_next_to_existing_table() -> None:
     """A missing leaf under an existing table is inserted; everything else is untouched."""
     configs = {
-        "40": MicrogridConfig(meta=Metadata(microgrid_id=40, altitude=45.5)),
+        40: MicrogridConfig(meta=Metadata(microgrid_id=40, altitude=45.5)),
     }
 
     patched = patch_text(_ORIGINAL, configs)
@@ -59,7 +59,7 @@ def test_patch_inserts_missing_leaf_next_to_existing_table() -> None:
 def test_patch_appends_new_microgrid_at_the_end() -> None:
     """A microgrid id absent from the file is appended, blank-line separated."""
     configs = {
-        "9999": MicrogridConfig(meta=Metadata(microgrid_id=9999, name="Brand New")),
+        9999: MicrogridConfig(meta=Metadata(microgrid_id=9999, name="Brand New")),
     }
 
     patched = patch_text(_ORIGINAL, configs)
@@ -73,7 +73,7 @@ def test_patch_appends_new_microgrid_at_the_end() -> None:
 def test_patch_inserts_new_subtable_next_to_its_microgrid() -> None:
     """A brand-new sub-table for an existing id lands next to that id's other lines."""
     configs = {
-        "40": MicrogridConfig(
+        40: MicrogridConfig(
             meta=Metadata(microgrid_id=40),
             pv={"2": PVConfig(peak_power=50_000.0)},
         ),
@@ -88,11 +88,11 @@ def test_patch_inserts_new_subtables_for_multiple_microgrids() -> None:
     """Each microgrid's new sub-table lands next to its own lines, not all at the end."""
     original = _ORIGINAL + '\n41.meta.name = "Other Grid"\n41.meta.microgrid_id = 41\n'
     configs = {
-        "40": MicrogridConfig(
+        40: MicrogridConfig(
             meta=Metadata(microgrid_id=40),
             pv={"2": PVConfig(peak_power=50_000.0)},
         ),
-        "41": MicrogridConfig(
+        41: MicrogridConfig(
             meta=Metadata(microgrid_id=41),
             ctype={"grid": ComponentTypeConfig(meter=[1])},
         ),
@@ -113,7 +113,7 @@ def test_patch_inserts_new_subtables_for_multiple_microgrids() -> None:
 def test_patch_formats_new_numeric_leaves() -> None:
     """Newly inserted numeric leaves go through the same underscore formatting."""
     configs = {
-        "5555": MicrogridConfig(
+        5555: MicrogridConfig(
             meta=Metadata(microgrid_id=5555, enterprise_id=1_234_567)
         ),
     }
