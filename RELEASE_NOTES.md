@@ -70,6 +70,11 @@
 
 ## New Features
 
+- `gridpool-cli validate <files>` checks config files offline and exits
+  non-zero on the first error, to gate config-repo CI. Each file must be valid
+  on its own, so a record names its own key and required fields; the files are
+  then checked merged, for the cross-record checks.
+
 - `AssetsConfig` gives the `assets` namespace a type, so the entities still to
   come are added as fields rather than as more dict lookups. Microgrid IDs are
   checked during construction. `AssetsConfig.check()` performs the topology-wide

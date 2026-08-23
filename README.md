@@ -75,7 +75,7 @@ The following platforms are officially supported (tested):
 
 ## CLI
 
-This package ships the `gridpool-cli` command with three subcommands.
+This package ships the `gridpool-cli` command with four subcommands.
 
 ### Setup
 
@@ -173,6 +173,19 @@ config can keep the meter-first order of the per-category formulas:
 gridpool-cli generate-config <microgrid_id> \
     --prefer-meters-in-component-formulas > microgrid.toml
 ```
+
+### Validate config files
+
+Check config files offline, without contacting the Assets API, and exit
+non-zero on the first error, to gate config-repo CI:
+
+```bash
+gridpool-cli validate microgrid.toml [more.toml ...]
+```
+
+Each file is validated on its own first, so every record names its own key and
+required fields; the files are then validated merged, for the cross-record
+checks.
 
 ## Contributing
 

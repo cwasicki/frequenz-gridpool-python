@@ -5,17 +5,22 @@
 
 import os
 import tempfile
+import tomllib
 from pathlib import Path
 
 import asyncclick as click
 from frequenz.client.assets import AssetsApiClient
 from frequenz.client.common.microgrid import MicrogridId
+from marshmallow import ValidationError
 
 from frequenz.gridpool import ComponentGraphConfig, ComponentGraphGenerator
 from frequenz.gridpool.cli._dump_config import dump_map
 from frequenz.gridpool.cli._patch_config import patch_file
 from frequenz.gridpool.cli._render_graph import ComponentGraphRenderer, RenderOptions
 from frequenz.gridpool.config import AssetsConfig, load_configs
+
+_LOAD_ERRORS = (ValueError, TypeError, tomllib.TOMLDecodeError, ValidationError)
+"""Exceptions raised when a config file fails to load or validate."""
 
 
 @click.group()
@@ -104,6 +109,39 @@ async def print_formulas(
                 prefix.format(component=component, microgrid_id=microgrid_id)
                 + f' = "{formula}"'
             )
+
+
+@cli.command()
+@click.argument(
+    "config_files",
+    nargs=-1,
+    required=True,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+)
+async def validate(config_files: tuple[Path, ...]) -> None:
+    """Validate each config file on its own, then the merged stack.
+
+    Each file must stand alone: every record names its own key and required
+    fields. The merged stack then adds the cross-record checks. Exits non-zero
+    on the first error, to gate CI.
+    """
+    for config_file in config_files:
+        try:
+            AssetsConfig.load_from_files([config_file])
+        except _LOAD_ERRORS as exc:
+            raise click.ClickException(f"{config_file}: {exc}") from exc
+
+    try:
+        config = AssetsConfig.load_from_files(list(config_files))
+    except _LOAD_ERRORS as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    click.echo(
+        f"OK: {len(config_files)} file(s), {len(config.microgrids)} microgrid(s), "
+        f"{len(config.relations)} relation(s), "
+        f"{len(config.market_locations)} market location(s).",
+        err=True,
+    )
 
 
 @cli.command("render-graph")

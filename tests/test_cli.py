@@ -3,6 +3,7 @@
 
 """Tests for the gridpool CLI."""
 
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from asyncclick.testing import CliRunner
@@ -140,3 +141,81 @@ async def test_missing_credentials_fail_with_a_readable_message() -> None:
 def test_graph_config_is_none_without_the_flag() -> None:
     """With no flag no config is built, so the library's defaults apply."""
     assert _graph_config(False) is None
+
+
+async def test_validate_accepts_a_valid_stack() -> None:
+    """A well-formed document validates with a zero exit code."""
+    with CliRunner().isolated_filesystem():
+        Path("good.toml").write_text(
+            "[assets.relations.G80M241L10208446344]\n"
+            "gridpool_id = 80\n"
+            "microgrid_id = 241\n"
+            'market_location_id = "10208446344"\n'
+            'delivery_area.code = "10YDE-RWENET---I"\n',
+            encoding="utf-8",
+        )
+        result = await CliRunner().invoke(cli, ["validate", "good.toml"])
+
+    assert result.exit_code == 0, result.output
+
+
+async def test_validate_reports_a_bad_eic_code() -> None:
+    """A malformed EIC code fails with a non-zero exit and a readable message."""
+    with CliRunner().isolated_filesystem():
+        Path("bad.toml").write_text(
+            "[assets.relations.G80M241L10208446344]\n"
+            "gridpool_id = 80\n"
+            "microgrid_id = 241\n"
+            'market_location_id = "10208446344"\n'
+            'delivery_area.code = "10YDE-RWENET---X"\n',
+            encoding="utf-8",
+        )
+        result = await CliRunner().invoke(cli, ["validate", "bad.toml"])
+
+    assert result.exit_code != 0
+    assert "valid EIC code" in result.output
+
+
+async def test_validate_rejects_a_partial_file_even_in_a_stack() -> None:
+    """Each file must stand alone; a partial record is not completed by a merge."""
+    with CliRunner().isolated_filesystem():
+        Path("base.toml").write_text(
+            "[assets.relations.G80M241L10208446344]\n"
+            "gridpool_id = 80\n"
+            "microgrid_id = 241\n"
+            'market_location_id = "10208446344"\n',
+            encoding="utf-8",
+        )
+        Path("override.toml").write_text(
+            "[assets.relations.G80M241L10208446344]\n"
+            'delivery_area.code = "10YDE-RWENET---I"\n',
+            encoding="utf-8",
+        )
+        runner = CliRunner()
+        alone = await runner.invoke(cli, ["validate", "base.toml"])
+        stacked = await runner.invoke(cli, ["validate", "base.toml", "override.toml"])
+
+    assert alone.exit_code != 0, alone.output
+    assert stacked.exit_code != 0, stacked.output
+
+
+async def test_validate_accepts_a_stack_of_complete_files() -> None:
+    """Several files, each self-valid, validate together."""
+    with CliRunner().isolated_filesystem():
+        Path("relation.toml").write_text(
+            "[assets.relations.G80M241L10208446344]\n"
+            "gridpool_id = 80\n"
+            "microgrid_id = 241\n"
+            'market_location_id = "10208446344"\n'
+            'delivery_area.code = "10YDE-RWENET---I"\n',
+            encoding="utf-8",
+        )
+        Path("microgrid.toml").write_text(
+            "assets.microgrids.241.microgrid_id = 241\n",
+            encoding="utf-8",
+        )
+        result = await CliRunner().invoke(
+            cli, ["validate", "relation.toml", "microgrid.toml"]
+        )
+
+    assert result.exit_code == 0, result.output
