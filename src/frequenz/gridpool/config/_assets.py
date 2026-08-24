@@ -82,7 +82,7 @@ def _merge_file_tables(
 class AssetsConfig:
     """Entities described by a config document, keyed by their ID."""
 
-    microgrids: dict[str, MicrogridConfig] = field(default_factory=dict)
+    microgrids: dict[int, MicrogridConfig] = field(default_factory=dict)
     """Microgrids, keyed by microgrid ID."""
 
     market_locations: dict[str, MarketLocationConfig] = field(default_factory=dict)
@@ -115,9 +115,7 @@ class AssetsConfig:
             ValueError: If a key is not the ID of the entry it holds.
         """
         for mid, cfg in self.microgrids.items():
-            if not mid.isdigit():
-                raise ValueError(f"Microgrid ID key must be numeric, got {mid}")
-            if int(cfg.meta.microgrid_id) != int(mid):
+            if int(cfg.meta.microgrid_id) != mid:
                 raise ValueError(
                     f"Microgrid ID mismatch: key {mid} != {cfg.meta.microgrid_id}"
                 )

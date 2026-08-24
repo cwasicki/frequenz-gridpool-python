@@ -20,12 +20,12 @@ from frequenz.gridpool.config import MicrogridConfig
 from ._dump_config import _format_value, _iter_leaves
 
 
-def patch_file(path: Path, configs: dict[str, MicrogridConfig]) -> str:
+def patch_file(path: Path, configs: dict[int, MicrogridConfig]) -> str:
     """Patch the TOML file at `path` with any leaves missing from `configs`.
 
     Args:
         path: Path to the existing TOML file to patch.
-        configs: Mapping from microgrid ID (as string) to `MicrogridConfig`.
+        configs: Mapping from microgrid ID to `MicrogridConfig`.
 
     Returns:
         The patched TOML text; the caller is responsible for writing it back.
@@ -33,12 +33,12 @@ def patch_file(path: Path, configs: dict[str, MicrogridConfig]) -> str:
     return patch_text(path.read_text(), configs)
 
 
-def patch_text(original: str, configs: dict[str, MicrogridConfig]) -> str:
+def patch_text(original: str, configs: dict[int, MicrogridConfig]) -> str:
     """Patch dotted-key TOML text with any leaves missing from `configs`.
 
     Args:
         original: The existing TOML text to patch.
-        configs: Mapping from microgrid ID (as string) to `MicrogridConfig`.
+        configs: Mapping from microgrid ID to `MicrogridConfig`.
 
     Returns:
         The patched TOML text.
@@ -51,7 +51,8 @@ def patch_text(original: str, configs: dict[str, MicrogridConfig]) -> str:
     # into the rendered text instead.
     orphans: dict[str, list[tuple[list[str], Any]]] = {}
 
-    for mid, cfg in configs.items():
+    for microgrid_id, cfg in configs.items():
+        mid = str(microgrid_id)
         dumped = schema.dump(cfg)
         assert isinstance(dumped, dict)
         leaves = _iter_leaves([], dumped)

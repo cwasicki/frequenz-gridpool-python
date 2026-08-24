@@ -71,11 +71,11 @@ def _iter_leaves(
     return leaves
 
 
-def dump_map(configs: dict[str, MicrogridConfig]) -> str:
+def dump_map(configs: dict[int, MicrogridConfig]) -> str:
     """Serialize a mapping of microgrid configs to dotted-key TOML.
 
     Args:
-        configs: Mapping from microgrid ID (as string) to `MicrogridConfig`.
+        configs: Mapping from microgrid ID to `MicrogridConfig`.
 
     Returns:
         The TOML representation as a string, with one blank line between
@@ -83,10 +83,10 @@ def dump_map(configs: dict[str, MicrogridConfig]) -> str:
     """
     schema = MicrogridConfig.Schema()
     doc = tomlkit.document()
-    for mid in sorted(configs, key=int):
+    for mid in sorted(configs):
         dumped = schema.dump(configs[mid])
         assert isinstance(dumped, dict)
-        leaves = _iter_leaves([mid], dumped)
+        leaves = _iter_leaves([str(mid)], dumped)
         if not leaves:
             continue
         if doc.body:

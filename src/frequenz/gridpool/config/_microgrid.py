@@ -291,7 +291,7 @@ class MicrogridConfig:
     Schema: ClassVar[Type[Schema]] = Schema
 
     @classmethod
-    def _load_table_entries(cls, data: dict[str, Any]) -> dict[str, Self]:
+    def _load_table_entries(cls, data: dict[str, Any]) -> dict[int, Self]:
         """Load microgrid configurations from table entries.
 
         Args:
@@ -327,6 +327,6 @@ class MicrogridConfig:
                     f"Table reader: Microgrid ID mismatch: key {mid} != {mgrid.meta.microgrid_id}"
                 )
 
-            mgrids[mid] = mgrid
+            mgrids[int(mid)] = mgrid
 
         return mgrids

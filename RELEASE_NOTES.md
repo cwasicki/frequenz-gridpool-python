@@ -45,6 +45,14 @@
 - The implementation modules `config.load` and `config.microgrid` are now
   private. Import their public names from `frequenz.gridpool.config` instead.
 
+- Microgrids are now keyed by `int` microgrid ID, not `str`. This covers
+  `AssetsConfig.microgrids`, including documents returned by `load_configs`.
+  Index the mapping by integer ID:
+
+  ```python
+  configs[1]  # was configs["1"]
+  ```
+
 ## New Features
 
 - `AssetsConfig` gives the `assets` namespace a type, so the entities still to

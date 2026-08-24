@@ -346,7 +346,7 @@ def test_legacy_gridpool_id_must_match_relations() -> None:
             {"gridpool_id": 80, "microgrid_id": 241, "delivery_area": {"code": _AREA_A}}
         ),
     )
-    assert config.microgrids["241"].meta.gid == 80
+    assert config.microgrids[241].meta.gid == 80
 
     _load(
         microgrids={"241": {"meta": {"microgrid_id": 241}}},

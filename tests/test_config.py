@@ -48,7 +48,7 @@ VALID_CONFIG: dict[str, dict[str, Any]] = {
 def valid_microgrid_config() -> MicrogridConfig:
     """Fixture to provide a valid MicrogridConfig instance."""
     # pylint: disable=protected-access
-    return MicrogridConfig._load_table_entries(VALID_CONFIG)["1"]
+    return MicrogridConfig._load_table_entries(VALID_CONFIG)[1]
 
 
 def test_is_valid_type() -> None:
@@ -136,17 +136,17 @@ def test_load_configs(mocker: MockerFixture) -> None:
     mocker.patch("pathlib.Path.is_file", mocker.Mock(return_value=True))
     configs = AssetsConfig.load_from_files(Path("mock_path.toml")).microgrids
 
-    assert "1" in configs
-    assert configs["1"].meta is not None
-    assert configs["1"].meta.name == "Test Grid"
+    assert 1 in configs
+    assert configs[1].meta is not None
+    assert configs[1].meta.name == "Test Grid"
 
-    pv_config = configs["1"].pv
+    pv_config = configs[1].pv
     assert pv_config is not None
     pv_system = pv_config.get("PV1")
     assert pv_system is not None
     assert pv_system.peak_power == 5000
 
-    battery_config = configs["1"].battery
+    battery_config = configs[1].battery
     assert battery_config is not None
     battery_system = battery_config.get("BAT1")
     assert battery_system is not None
@@ -194,8 +194,8 @@ def test_load_prefixed(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None
         _write(tmp_path, "prefixed.toml", _PREFIXED_TOML)
     ).microgrids
 
-    assert configs["1"].meta.name == "Test Grid"
-    assert configs["1"].component_type_ids("pv") == [101, 102]
+    assert configs[1].meta.name == "Test Grid"
+    assert configs[1].component_type_ids("pv") == [101, 102]
     assert "deprecated" not in caplog.text
 
 
@@ -206,7 +206,7 @@ def test_load_legacy_warns(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> 
     with caplog.at_level(logging.WARNING):
         configs = AssetsConfig.load_from_files(path).microgrids
 
-    assert configs["1"].meta.name == "Test Grid"
+    assert configs[1].meta.name == "Test Grid"
     assert "deprecated" in caplog.text
     assert str(path) in caplog.text
 
@@ -241,8 +241,8 @@ async def test_merge_prefixed_base_with_legacy_override(tmp_path: Path) -> None:
         await load_configs(default_files=base, override_files=override)
     ).microgrids
 
-    assert configs["1"].meta.name == "Renamed"
-    assert configs["1"].component_type_ids("pv") == [101, 102]
+    assert configs[1].meta.name == "Renamed"
+    assert configs[1].component_type_ids("pv") == [101, 102]
 
 
 def test_load_from_files_layers_fields(tmp_path: Path) -> None:
@@ -257,8 +257,8 @@ def test_load_from_files_layers_fields(tmp_path: Path) -> None:
 
     configs = AssetsConfig.load_from_files([base, override]).microgrids
 
-    assert configs["1"].meta.name == "Renamed"
-    assert configs["1"].component_type_ids("pv") == [101, 102]
+    assert configs[1].meta.name == "Renamed"
+    assert configs[1].component_type_ids("pv") == [101, 102]
 
 
 def test_assets_config_rejects_mismatched_id() -> None:
@@ -292,5 +292,5 @@ def test_assets_config_warns_on_unknown_entities(
     with caplog.at_level(logging.WARNING):
         config = AssetsConfig.load_from_files(path)
 
-    assert sorted(config.microgrids) == ["1"]
+    assert sorted(config.microgrids) == [1]
     assert "gridpool" in caplog.text
