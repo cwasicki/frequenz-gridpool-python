@@ -111,6 +111,9 @@
   Time-varying enterprise ownership is outside this change;
   `MicrogridConfig.enterprise_id` remains as a scalar field.
 
+- `gridpool-cli` accepts `FREQUENZ_API_KEY` and `FREQUENZ_API_SECRET` as a
+  fallback pair for `ASSETS_API_AUTH_KEY` and `ASSETS_API_SIGN_SECRET`.
+
 ## Bug Fixes
 
 - Layering config files no longer resets a field a later file leaves unset back

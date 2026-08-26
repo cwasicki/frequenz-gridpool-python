@@ -89,6 +89,54 @@ async def test_generate_config_prefer_meters_flips_the_order() -> None:
     )
 
 
+async def test_freq_api_env_vars_are_accepted_as_fallbacks() -> None:
+    """`FREQUENZ_API_{KEY,SECRET}` stand in when the `ASSETS_API_*` vars are unset."""
+    env = {
+        "ASSETS_API_URL": "grpc://localhost",
+        "ASSETS_API_AUTH_KEY": None,
+        "ASSETS_API_SIGN_SECRET": None,
+        "FREQUENZ_API_KEY": "freq-key",
+        "FREQUENZ_API_SECRET": "freq-secret",
+    }
+    client = _patched_client()
+    with patch("frequenz.gridpool.cli.__main__.AssetsApiClient", client):
+        result = await CliRunner().invoke(cli, ["print-formulas", "10"], env=env)
+
+    assert result.exit_code == 0, result.output
+    client.assert_called_once_with(
+        "grpc://localhost", auth_key="freq-key", sign_secret="freq-secret"
+    )
+
+
+async def test_partial_assets_credentials_are_not_mixed_with_fallbacks() -> None:
+    """A half-set `ASSETS_API_*` pair is not completed from `FREQUENZ_API_*`."""
+    env = {
+        "ASSETS_API_URL": "grpc://localhost",
+        "ASSETS_API_AUTH_KEY": "key",
+        "ASSETS_API_SIGN_SECRET": None,
+        "FREQUENZ_API_KEY": "freq-key",
+        "FREQUENZ_API_SECRET": "freq-secret",
+    }
+    result = await CliRunner().invoke(cli, ["print-formulas", "10"], env=env)
+
+    assert result.exit_code != 0, result.output
+
+
+async def test_missing_credentials_fail_with_a_readable_message() -> None:
+    """With no credentials set the command exits non-zero and names the vars."""
+    env = {
+        "ASSETS_API_URL": "grpc://localhost",
+        "ASSETS_API_AUTH_KEY": None,
+        "ASSETS_API_SIGN_SECRET": None,
+        "FREQUENZ_API_KEY": None,
+        "FREQUENZ_API_SECRET": None,
+    }
+    result = await CliRunner().invoke(cli, ["print-formulas", "10"], env=env)
+
+    assert result.exit_code != 0
+    assert "FREQUENZ_API_KEY" in result.output
+
+
 def test_graph_config_is_none_without_the_flag() -> None:
     """With no flag no config is built, so the library's defaults apply."""
     assert _graph_config(False) is None

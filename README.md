@@ -87,6 +87,9 @@ export ASSETS_API_AUTH_KEY="..."
 export ASSETS_API_SIGN_SECRET="..."
 ```
 
+`FREQUENZ_API_KEY` and `FREQUENZ_API_SECRET` are accepted as fallbacks for
+`ASSETS_API_AUTH_KEY` and `ASSETS_API_SIGN_SECRET`.
+
 ### Print component formulas
 
 ```bash

@@ -23,6 +23,28 @@ async def cli() -> None:
     """CLI tool for gridpool functionality."""
 
 
+def _assets_credentials() -> tuple[str, str, str]:
+    """Resolve Assets API URL, auth key and sign secret from the environment.
+
+    `FREQUENZ_API_KEY` and `FREQUENZ_API_SECRET` are accepted as a fallback pair
+    for `ASSETS_API_AUTH_KEY` and `ASSETS_API_SIGN_SECRET`. The key and secret
+    are taken as a whole from one source, never mixed across the two.
+    """
+    url = os.environ.get("ASSETS_API_URL")
+    key = os.environ.get("ASSETS_API_AUTH_KEY")
+    secret = os.environ.get("ASSETS_API_SIGN_SECRET")
+    if not key and not secret:
+        key = os.environ.get("FREQUENZ_API_KEY")
+        secret = os.environ.get("FREQUENZ_API_SECRET")
+    if not url or not key or not secret:
+        raise click.ClickException(
+            "ASSETS_API_URL and auth credentials must be set: "
+            "ASSETS_API_AUTH_KEY (or FREQUENZ_API_KEY) and "
+            "ASSETS_API_SIGN_SECRET (or FREQUENZ_API_SECRET)."
+        )
+    return url, key, secret
+
+
 def _graph_config(prefer_meters: bool) -> ComponentGraphConfig | None:
     """Build the graph config for `--prefer-meters-in-component-formulas`.
 
@@ -55,13 +77,7 @@ async def print_formulas(
     prefer_meters_in_component_formulas: bool,
 ) -> None:
     """Fetch and print component graph formulas for a microgrid."""
-    url = os.environ.get("ASSETS_API_URL")
-    key = os.environ.get("ASSETS_API_AUTH_KEY")
-    secret = os.environ.get("ASSETS_API_SIGN_SECRET")
-    if not url or not key or not secret:
-        raise click.ClickException(
-            "ASSETS_API_URL, ASSETS_API_AUTH_KEY, ASSETS_API_SIGN_SECRET must be set."
-        )
+    url, key, secret = _assets_credentials()
 
     async with AssetsApiClient(
         url,
@@ -107,13 +123,7 @@ async def print_formulas(
 )
 async def render_graph(microgrid_id: int, output: str, show: bool) -> None:
     """Render and save a component graph visualization for a microgrid."""
-    url = os.environ.get("ASSETS_API_URL")
-    key = os.environ.get("ASSETS_API_AUTH_KEY")
-    secret = os.environ.get("ASSETS_API_SIGN_SECRET")
-    if not url or not key or not secret:
-        raise click.ClickException(
-            "ASSETS_API_URL, ASSETS_API_AUTH_KEY, ASSETS_API_SIGN_SECRET must be set."
-        )
+    url, key, secret = _assets_credentials()
 
     try:
         async with AssetsApiClient(
@@ -192,13 +202,7 @@ async def generate_config(
     if inplace and default_file is None:
         raise click.ClickException("--inplace requires --default.")
 
-    url = os.environ.get("ASSETS_API_URL")
-    key = os.environ.get("ASSETS_API_AUTH_KEY")
-    secret = os.environ.get("ASSETS_API_SIGN_SECRET")
-    if not url or not key or not secret:
-        raise click.ClickException(
-            "ASSETS_API_URL, ASSETS_API_AUTH_KEY, ASSETS_API_SIGN_SECRET must be set."
-        )
+    url, key, secret = _assets_credentials()
 
     ids = list(dict.fromkeys(microgrid_ids)) or None
     if inplace and ids is None:
