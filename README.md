@@ -75,7 +75,7 @@ The following platforms are officially supported (tested):
 
 ## CLI
 
-This package ships the `gridpool-cli` command with four subcommands.
+This package ships the `gridpool-cli` command with five subcommands.
 
 ### Setup
 
@@ -186,6 +186,15 @@ gridpool-cli validate microgrid.toml [more.toml ...]
 Each file is validated on its own first, so every record names its own key and
 required fields; the files are then validated merged, for the cross-record
 checks.
+
+### Look up a gridpool's enterprise
+
+Print the enterprise ID that owns a gridpool, read from the config files
+(merged as one stack); exits non-zero if the gridpool is not declared:
+
+```bash
+gridpool-cli find-enterprise <gridpool_id> config.toml [more.toml ...]
+```
 
 ## Contributing
 
