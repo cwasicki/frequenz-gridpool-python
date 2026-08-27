@@ -119,6 +119,10 @@
 - `gridpool-cli` accepts `FREQUENZ_API_KEY` and `FREQUENZ_API_SECRET` as a
   fallback pair for `ASSETS_API_AUTH_KEY` and `ASSETS_API_SIGN_SECRET`.
 
+- Gridpools are described under `assets.gridpools`, each entry naming the
+  enterprise that owns the gridpool. `AssetsConfig.gridpools` holds the
+  registry and `AssetsConfig.find_enterprise(gridpool_id)` returns the owner.
+
 ## Bug Fixes
 
 - Layering config files no longer resets a field a later file leaves unset back

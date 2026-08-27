@@ -14,6 +14,7 @@ from pytest_mock import MockerFixture
 from frequenz.gridpool.config import (
     AssetsConfig,
     ComponentTypeConfig,
+    GridpoolConfig,
     MicrogridConfig,
     load_configs,
 )
@@ -284,6 +285,34 @@ def test_assets_config_rejects_mismatched_id() -> None:
     """An entry filed under the wrong ID is rejected wherever it is loaded."""
     with pytest.raises(ValueError, match="Microgrid ID mismatch"):
         AssetsConfig.Schema().load({"microgrids": {"23": {"microgrid_id": 99}}})
+
+
+def test_gridpool_names_its_owning_enterprise() -> None:
+    """A gridpool entry records the enterprise that owns it, keyed by its ID."""
+    config = AssetsConfig.Schema().load(
+        {"gridpools": {"80": {"gridpool_id": 80, "enterprise_id": 42}}}
+    )
+    assert config.gridpools[80] == GridpoolConfig(gridpool_id=80, enterprise_id=42)
+    assert config.find_enterprise(80) == 42
+
+
+def test_find_enterprise_unknown_gridpool_is_none() -> None:
+    """Looking up a gridpool with no entry yields `None`, not an error."""
+    assert AssetsConfig().find_enterprise(999) is None
+
+
+def test_gridpool_rejects_mismatched_id() -> None:
+    """A gridpool filed under the wrong ID is rejected."""
+    with pytest.raises(ValueError, match="Gridpool ID mismatch"):
+        AssetsConfig.Schema().load(
+            {"gridpools": {"80": {"gridpool_id": 99, "enterprise_id": 42}}}
+        )
+
+
+def test_gridpool_requires_an_enterprise() -> None:
+    """A gridpool must name its enterprise; the invariant is not optional."""
+    with pytest.raises(ValidationError, match="enterprise_id"):
+        AssetsConfig.Schema().load({"gridpools": {"80": {"gridpool_id": 80}}})
 
 
 def test_microgrid_delivery_area_removed() -> None:

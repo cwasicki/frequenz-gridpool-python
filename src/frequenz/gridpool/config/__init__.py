@@ -6,6 +6,7 @@
 from frequenz.microgrid_component_graph import ComponentGraphConfig, FormulaOverrides
 
 from ._assets import AssetsConfig
+from ._gridpool import GridpoolConfig
 from ._load import load_configs
 from ._microgrid import (
     BatteryConfig,
@@ -32,6 +33,7 @@ __all__ = [
     "ComponentTypeConfig",
     "DeliveryAreaConfig",
     "FormulaOverrides",
+    "GridpoolConfig",
     "MarketLocationConfig",
     "MicrogridConfig",
     "PVConfig",

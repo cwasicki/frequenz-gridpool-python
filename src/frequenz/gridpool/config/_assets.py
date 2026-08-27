@@ -15,6 +15,7 @@ from frequenz.client.assets import MarketParticipationType
 from marshmallow import Schema
 from marshmallow_dataclass import dataclass
 
+from ._gridpool import GridpoolConfig
 from ._microgrid import MicrogridConfig
 from ._migrations import _CURRENT_VERSION, migrate
 from ._topology import DeliveryAreaConfig, MarketLocationConfig, RelationConfig
@@ -89,6 +90,9 @@ class AssetsConfig:
     microgrids: dict[int, MicrogridConfig] = field(default_factory=dict)
     """Microgrids, keyed by microgrid ID."""
 
+    gridpools: dict[int, GridpoolConfig] = field(default_factory=dict)
+    """Gridpools, keyed by gridpool ID."""
+
     market_locations: dict[str, MarketLocationConfig] = field(default_factory=dict)
     """Market locations, keyed by their identifier."""
 
@@ -122,6 +126,11 @@ class AssetsConfig:
             if int(cfg.microgrid_id) != mid:
                 raise ValueError(
                     f"Microgrid ID mismatch: key {mid} != {cfg.microgrid_id}"
+                )
+        for gpid, gridpool in self.gridpools.items():
+            if int(gridpool.gridpool_id) != gpid:
+                raise ValueError(
+                    f"Gridpool ID mismatch: key {gpid} != {gridpool.gridpool_id}"
                 )
 
     def check(self) -> None:
@@ -349,6 +358,19 @@ class AssetsConfig:
                 if relation.microgrid_id is not None
             )
         )
+
+    def find_enterprise(self, gridpool_id: int) -> int | None:
+        """The enterprise owning `gridpool_id`, or `None` if it is not declared.
+
+        Args:
+            gridpool_id: The gridpool to look up.
+
+        Returns:
+            The owning enterprise ID, or `None` when no `gridpools` entry names
+            the gridpool.
+        """
+        gridpool = self.gridpools.get(gridpool_id)
+        return gridpool.enterprise_id if gridpool is not None else None
 
     @classmethod
     def _warn_unknown_entities(cls, assets: dict[str, Any], source: Path) -> None:
