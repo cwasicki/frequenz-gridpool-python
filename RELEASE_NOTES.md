@@ -120,8 +120,9 @@
   fallback pair for `ASSETS_API_AUTH_KEY` and `ASSETS_API_SIGN_SECRET`.
 
 - Gridpools are described under `assets.gridpools`, each entry naming the
-  enterprise that owns the gridpool. `AssetsConfig.gridpools` holds the
-  registry and `AssetsConfig.find_enterprise(gridpool_id)` returns the owner.
+  enterprise that owns the gridpool. `AssetsConfig.find_enterprise(gridpool_id)`
+  returns the owner: a declared `gridpools` entry if present, otherwise the
+  enterprise inferred from the gridpool's microgrids.
   `gridpool-cli find-enterprise <gridpool_id> <files>` prints it from the config.
 
 - A config derived from the Assets API now carries each microgrid's

@@ -183,6 +183,22 @@ async def test_find_enterprise_prints_the_owner() -> None:
     assert result.output.strip() == "42"
 
 
+async def test_find_enterprise_infers_from_microgrids() -> None:
+    """With no `gridpools` entry, the owner is inferred from related microgrids."""
+    with CliRunner().isolated_filesystem():
+        Path("cfg.toml").write_text(
+            "assets.microgrids.10.microgrid_id = 10\n"
+            "assets.microgrids.10.enterprise_id = 7\n"
+            "assets.relations.G80M10.gridpool_id = 80\n"
+            "assets.relations.G80M10.microgrid_id = 10\n",
+            encoding="utf-8",
+        )
+        result = await CliRunner().invoke(cli, ["find-enterprise", "80", "cfg.toml"])
+
+    assert result.exit_code == 0, result.output
+    assert result.output.strip() == "7"
+
+
 async def test_find_enterprise_fails_for_an_unknown_gridpool() -> None:
     """A gridpool with no entry exits non-zero with a readable message."""
     with CliRunner().isolated_filesystem():

@@ -315,6 +315,47 @@ def test_gridpool_requires_an_enterprise() -> None:
         AssetsConfig.Schema().load({"gridpools": {"80": {"gridpool_id": 80}}})
 
 
+def test_enterprise_is_inferred_from_the_gridpool_microgrids() -> None:
+    """Without a `gridpools` entry, the owner comes from the related microgrids."""
+    config = AssetsConfig.Schema().load(
+        {
+            "microgrids": {"10": {"microgrid_id": 10, "enterprise_id": 7}},
+            "relations": {"G80M10": {"gridpool_id": 80, "microgrid_id": 10}},
+        }
+    )
+    assert config.find_enterprise(80) == 7
+
+
+def test_declared_gridpool_enterprise_wins_over_inference() -> None:
+    """A `gridpools` entry is authoritative even when microgrids could infer one."""
+    config = AssetsConfig.Schema().load(
+        {
+            "gridpools": {"80": {"gridpool_id": 80, "enterprise_id": 42}},
+            "microgrids": {"10": {"microgrid_id": 10, "enterprise_id": 7}},
+            "relations": {"G80M10": {"gridpool_id": 80, "microgrid_id": 10}},
+        }
+    )
+    assert config.find_enterprise(80) == 42
+
+
+def test_inference_rejects_microgrids_that_disagree() -> None:
+    """Microgrids of one gridpool naming different enterprises is an error."""
+    config = AssetsConfig.Schema().load(
+        {
+            "microgrids": {
+                "10": {"microgrid_id": 10, "enterprise_id": 7},
+                "11": {"microgrid_id": 11, "enterprise_id": 8},
+            },
+            "relations": {
+                "G80M10": {"gridpool_id": 80, "microgrid_id": 10},
+                "G80M11": {"gridpool_id": 80, "microgrid_id": 11},
+            },
+        }
+    )
+    with pytest.raises(ValueError, match="disagree on the owning enterprise"):
+        config.find_enterprise(80)
+
+
 def test_microgrid_delivery_area_removed() -> None:
     """Delivery areas live on topology relations, not on a microgrid."""
     with pytest.raises(ValidationError, match="Unknown field"):

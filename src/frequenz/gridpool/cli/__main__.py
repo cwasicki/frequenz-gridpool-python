@@ -155,17 +155,21 @@ async def validate(config_files: tuple[Path, ...]) -> None:
 async def find_enterprise(gridpool_id: int, config_files: tuple[Path, ...]) -> None:
     """Print the enterprise ID owning GRIDPOOL_ID, read from the config files.
 
-    The files are read as one merged stack. Exits non-zero if no `gridpools`
-    entry names the gridpool.
+    The files are read as one merged stack. The owner is taken from a
+    `gridpools` entry, or inferred from the gridpool's microgrids. Exits
+    non-zero if it cannot be determined.
     """
     try:
         config = AssetsConfig.load_from_files(list(config_files), check=False)
+        enterprise_id = config.find_enterprise(gridpool_id)
     except _LOAD_ERRORS as exc:
         raise click.ClickException(str(exc)) from exc
 
-    enterprise_id = config.find_enterprise(gridpool_id)
     if enterprise_id is None:
-        raise click.ClickException(f"No gridpool {gridpool_id} in the given config(s).")
+        raise click.ClickException(
+            f"Could not determine the enterprise for gridpool {gridpool_id} "
+            "from the given config(s)."
+        )
     click.echo(enterprise_id)
 
 

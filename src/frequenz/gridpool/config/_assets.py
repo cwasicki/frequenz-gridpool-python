@@ -360,17 +360,46 @@ class AssetsConfig:
         )
 
     def find_enterprise(self, gridpool_id: int) -> int | None:
-        """The enterprise owning `gridpool_id`, or `None` if it is not declared.
+        """The enterprise owning `gridpool_id`.
+
+        A declared `gridpools` entry wins; otherwise the owner is inferred from
+        the enterprise of the microgrids the gridpool's relations name, since a
+        gridpool shares its enterprise with them.
 
         Args:
             gridpool_id: The gridpool to look up.
 
         Returns:
-            The owning enterprise ID, or `None` when no `gridpools` entry names
-            the gridpool.
+            The owning enterprise ID, or `None` when it is neither declared nor
+            derivable from any related microgrid.
+
+        Raises:
+            ValueError: If the related microgrids disagree on the enterprise.
         """
         gridpool = self.gridpools.get(gridpool_id)
-        return gridpool.enterprise_id if gridpool is not None else None
+        if gridpool is not None:
+            return gridpool.enterprise_id
+        return self._derive_enterprise(gridpool_id)
+
+    def _derive_enterprise(self, gridpool_id: int) -> int | None:
+        """Infer a gridpool's enterprise from the microgrids its relations name.
+
+        Raises:
+            ValueError: If the related microgrids disagree on the enterprise.
+        """
+        enterprises: set[int] = set()
+        for mid in self.find_microgrids(gridpool_id=gridpool_id):
+            microgrid = self.microgrids.get(mid)
+            if microgrid is not None and microgrid.enterprise_id is not None:
+                enterprises.add(microgrid.enterprise_id)
+        if not enterprises:
+            return None
+        if len(enterprises) > 1:
+            raise ValueError(
+                f"Gridpool {gridpool_id}: its microgrids disagree on the owning "
+                f"enterprise: {sorted(enterprises)}"
+            )
+        return enterprises.pop()
 
     @classmethod
     def _warn_unknown_entities(cls, assets: dict[str, Any], source: Path) -> None:
