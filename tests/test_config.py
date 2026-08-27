@@ -356,6 +356,57 @@ def test_inference_rejects_microgrids_that_disagree() -> None:
         config.find_enterprise(80)
 
 
+def _gridpool_relation(gridpool_id: int, microgrid_id: int) -> dict[str, Any]:
+    """A minimal valid gridpool-to-microgrid relation with a delivery area."""
+    return {
+        f"G{gridpool_id}M{microgrid_id}": {
+            "gridpool_id": gridpool_id,
+            "microgrid_id": microgrid_id,
+            "delivery_area": {"code": "10YDE-RWENET---I"},
+        }
+    }
+
+
+def test_check_rejects_a_declared_enterprise_the_microgrids_contradict() -> None:
+    """A `gridpools` enterprise must match what the gridpool's microgrids imply."""
+    config = AssetsConfig.Schema().load(
+        {
+            "gridpools": {"80": {"gridpool_id": 80, "enterprise_id": 42}},
+            "microgrids": {"10": {"microgrid_id": 10, "enterprise_id": 7}},
+            "relations": _gridpool_relation(80, 10),
+        }
+    )
+    with pytest.raises(ValueError, match="declared enterprise 42 disagrees"):
+        config.check()
+
+
+def test_check_passes_when_declared_matches_the_microgrids() -> None:
+    """A declared enterprise agreeing with the microgrids is accepted."""
+    config = AssetsConfig.Schema().load(
+        {
+            "gridpools": {"80": {"gridpool_id": 80, "enterprise_id": 7}},
+            "microgrids": {"10": {"microgrid_id": 10, "enterprise_id": 7}},
+            "relations": _gridpool_relation(80, 10),
+        }
+    )
+    config.check()
+
+
+def test_check_rejects_a_gridpool_whose_microgrids_disagree() -> None:
+    """The one-enterprise invariant is enforced across the whole document."""
+    config = AssetsConfig.Schema().load(
+        {
+            "microgrids": {
+                "10": {"microgrid_id": 10, "enterprise_id": 7},
+                "11": {"microgrid_id": 11, "enterprise_id": 8},
+            },
+            "relations": _gridpool_relation(80, 10) | _gridpool_relation(80, 11),
+        }
+    )
+    with pytest.raises(ValueError, match="disagree on the owning enterprise"):
+        config.check()
+
+
 def test_microgrid_delivery_area_removed() -> None:
     """Delivery areas live on topology relations, not on a microgrid."""
     with pytest.raises(ValidationError, match="Unknown field"):

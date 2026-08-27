@@ -140,8 +140,9 @@ class AssetsConfig:
             ValueError: If an entry's identifier disagrees with the key it is
                 filed under, a relation names fewer than two sides, its key
                 disagrees with its fields, a gridpool relation names no delivery
-                area, one market location is placed in two of them, or a legacy
-                microgrid gridpool ID disagrees with its relations.
+                area, one market location is placed in two of them, a legacy
+                microgrid gridpool ID disagrees with its relations, or a
+                gridpool's declared and inferred enterprise disagree.
         """
         for key, location in self.market_locations.items():
             if location.id is None:
@@ -152,6 +153,7 @@ class AssetsConfig:
                 )
         self._check_relations()
         self._check_legacy_gridpool_ids()
+        self._check_gridpool_enterprises()
 
     def _check_relations(self) -> None:
         """Check the relations are complete, well-keyed and area-consistent.
@@ -220,6 +222,35 @@ class AssetsConfig:
                     f"Microgrid {microgrid.microgrid_id}: legacy gid "
                     f"{legacy_gid} disagrees with relation gridpools "
                     f"{sorted(relation_gids)}; remove gid when several apply"
+                )
+
+    def _check_gridpool_enterprises(self) -> None:
+        """Check declared and inferable gridpool enterprises agree.
+
+        A gridpool owns one enterprise, so its microgrids must not disagree on
+        it, and a declared `gridpools` entry must match what they imply.
+
+        Raises:
+            ValueError: If a gridpool's microgrids disagree on the enterprise,
+                or a declared enterprise differs from the inferred one.
+        """
+        gridpool_ids = set(self.gridpools) | {
+            relation.gridpool_id
+            for relation in self.relations.values()
+            if relation.gridpool_id is not None
+        }
+        for gpid in gridpool_ids:
+            inferred = self._derive_enterprise(gpid)
+            declared = self.gridpools.get(gpid)
+            if (
+                declared is not None
+                and inferred is not None
+                and declared.enterprise_id != inferred
+            ):
+                raise ValueError(
+                    f"Gridpool {gpid}: declared enterprise "
+                    f"{declared.enterprise_id} disagrees with its microgrids' "
+                    f"enterprise {inferred}"
                 )
 
     def find_relations(

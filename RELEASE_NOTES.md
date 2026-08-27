@@ -124,6 +124,9 @@
   returns the owner: a declared `gridpools` entry if present, otherwise the
   enterprise inferred from the gridpool's microgrids.
   `gridpool-cli find-enterprise <gridpool_id> <files>` prints it from the config.
+  `AssetsConfig.check` enforces the one-enterprise-per-gridpool invariant: a
+  gridpool's microgrids may not disagree on it, and a declared enterprise must
+  match the inferred one.
 
 - A config derived from the Assets API now carries each microgrid's
   `enterprise_id`.
