@@ -124,6 +124,9 @@
   registry and `AssetsConfig.find_enterprise(gridpool_id)` returns the owner.
   `gridpool-cli find-enterprise <gridpool_id> <files>` prints it from the config.
 
+- A config derived from the Assets API now carries each microgrid's
+  `enterprise_id`.
+
 ## Bug Fixes
 
 - Layering config files no longer resets a field a later file leaves unset back

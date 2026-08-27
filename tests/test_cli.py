@@ -29,7 +29,9 @@ _ENV = {
 def _mock_client() -> MagicMock:
     """Mock an Assets API client: grid 1 -> meter 2 -> solar inverter 4."""
     client = MagicMock(spec=AssetsApiClient)
-    client.get_microgrid = AsyncMock(return_value=MagicMock(location=None))
+    client.get_microgrid = AsyncMock(
+        return_value=MagicMock(location=None, enterprise_id=7)
+    )
     client.list_microgrid_electrical_components = AsyncMock(
         return_value=[
             GridConnectionPoint(

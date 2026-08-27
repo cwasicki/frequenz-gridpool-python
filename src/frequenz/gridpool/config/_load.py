@@ -219,6 +219,7 @@ async def _build_config_from_metadata(
     location = mgrid.location if mgrid.location else None
     return MicrogridConfig(
         microgrid_id=microgrid_id,
+        enterprise_id=int(mgrid.enterprise_id),
         latitude=location.latitude if location else None,
         longitude=location.longitude if location else None,
     )
