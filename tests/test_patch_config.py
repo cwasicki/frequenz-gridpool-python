@@ -12,15 +12,15 @@ from frequenz.gridpool.config import (
 
 _ORIGINAL = """# EID 6 TOML configuration
 
-40.name = "Bona - Auf dem Aurain"  #grid_side True
-40.gid = 6
-40.enterprise_id = 6
-40.microgrid_id = 40
-40.latitude = 50.39567065
-40.longitude = 8.083947042665976
-40.ctype.grid.meter = [87]
-40.pv.1.peak_power = 616_140
-40.pv.1.rated_power = 480_000 # https://example.com/technischedaten
+assets.microgrids.40.name = "Bona - Auf dem Aurain"  #grid_side True
+assets.microgrids.40.gid = 6
+assets.microgrids.40.enterprise_id = 6
+assets.microgrids.40.microgrid_id = 40
+assets.microgrids.40.latitude = 50.39567065
+assets.microgrids.40.longitude = 8.083947042665976
+assets.microgrids.40.ctype.grid.meter = [87]
+assets.microgrids.40.pv.1.peak_power = 616_140
+assets.microgrids.40.pv.1.rated_power = 480_000 # https://example.com/technischedaten
 """
 
 
@@ -48,10 +48,11 @@ def test_patch_inserts_missing_leaf_next_to_existing_table() -> None:
     lines = patched.splitlines()
     assert 'name = "Bona - Auf dem Aurain"  #grid_side True' in lines[2]
     # A genuinely fractional value is left alone.
-    assert lines[3] == "40.altitude = 45.5"
+    assert lines[3] == "assets.microgrids.40.altitude = 45.5"
     # Untouched lines are unchanged, including comments.
     assert (
-        "40.pv.1.rated_power = 480_000 # https://example.com/technischedaten" in patched
+        "assets.microgrids.40.pv.1.rated_power = 480_000 # "
+        "https://example.com/technischedaten" in patched
     )
     assert "# EID 6 TOML configuration" in patched
 
@@ -66,7 +67,8 @@ def test_patch_appends_new_microgrid_at_the_end() -> None:
 
     assert patched.startswith(_ORIGINAL)
     assert patched[len(_ORIGINAL) :] == (
-        '\n9999.microgrid_id = 9_999\n9999.name = "Brand New"\n'
+        "\nassets.microgrids.9999.microgrid_id = 9_999\n"
+        'assets.microgrids.9999.name = "Brand New"\n'
     )
 
 
@@ -81,12 +83,15 @@ def test_patch_inserts_new_subtable_next_to_its_microgrid() -> None:
 
     patched = patch_text(_ORIGINAL, configs)
 
-    assert patched == _ORIGINAL + "40.pv.2.peak_power = 50_000\n"
+    assert patched == _ORIGINAL + "assets.microgrids.40.pv.2.peak_power = 50_000\n"
 
 
 def test_patch_inserts_new_subtables_for_multiple_microgrids() -> None:
     """Each microgrid's new sub-table lands next to its own lines, not all at the end."""
-    original = _ORIGINAL + '\n41.name = "Other Grid"\n41.microgrid_id = 41\n'
+    original = _ORIGINAL + (
+        '\nassets.microgrids.41.name = "Other Grid"\n'
+        "assets.microgrids.41.microgrid_id = 41\n"
+    )
     configs = {
         40: MicrogridConfig(
             microgrid_id=40,
@@ -103,11 +108,12 @@ def test_patch_inserts_new_subtables_for_multiple_microgrids() -> None:
     lines = patched.splitlines()
     assert lines[
         lines.index(
-            "40.pv.1.rated_power = 480_000 # https://example.com/technischedaten"
+            "assets.microgrids.40.pv.1.rated_power = 480_000 # "
+            "https://example.com/technischedaten"
         )
         + 1
-    ] == ("40.pv.2.peak_power = 50_000")
-    assert lines[-1] == "41.ctype.grid.meter = [1]"
+    ] == ("assets.microgrids.40.pv.2.peak_power = 50_000")
+    assert lines[-1] == "assets.microgrids.41.ctype.grid.meter = [1]"
 
 
 def test_patch_formats_new_numeric_leaves() -> None:
@@ -118,4 +124,4 @@ def test_patch_formats_new_numeric_leaves() -> None:
 
     patched = patch_text(_ORIGINAL, configs)
 
-    assert "5555.enterprise_id = 1_234_567\n" in patched
+    assert "assets.microgrids.5555.enterprise_id = 1_234_567\n" in patched

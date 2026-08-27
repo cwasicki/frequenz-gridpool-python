@@ -86,7 +86,8 @@ async def test_generate_config_prefer_meters_flips_the_order() -> None:
 
     assert result.exit_code == 0, result.output
     assert (
-        '10.ctype.pv.formula.AC_POWER_ACTIVE = "COALESCE(#2, #4, 0.0)"' in result.output
+        'assets.microgrids.10.ctype.pv.formula.AC_POWER_ACTIVE = "COALESCE(#2, #4, 0.0)"'
+        in result.output
     )
 
 

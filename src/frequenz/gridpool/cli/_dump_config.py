@@ -5,9 +5,11 @@
 
 Renders a `{microgrid_id: MicrogridConfig}` mapping as dotted-key TOML, e.g.:
 
-    115.microgrid_id = 115
-    115.name = "Demo Grid"
-    115.latitude = 52.52
+    assets.version = 1
+
+    assets.microgrids.115.microgrid_id = 115
+    assets.microgrids.115.name = "Demo Grid"
+    assets.microgrids.115.latitude = 52.52
 
 This is the inverse of `AssetsConfig.load_from_files`. Value rendering (quoting,
 escaping, key-quoting, list/number/datetime formatting) is delegated to
@@ -21,6 +23,9 @@ import tomlkit
 from tomlkit.items import Integer, Trivia
 
 from frequenz.gridpool.config import MicrogridConfig
+from frequenz.gridpool.config._migrations import _CURRENT_VERSION
+
+_MICROGRID_PREFIX = ["assets", "microgrids"]
 
 
 def _is_empty(value: Any) -> bool:
@@ -83,14 +88,14 @@ def dump_map(configs: dict[int, MicrogridConfig]) -> str:
     """
     schema = MicrogridConfig.Schema()
     doc = tomlkit.document()
+    doc.append(tomlkit.key(["assets", "version"]), _CURRENT_VERSION)
     for mid in sorted(configs):
         dumped = schema.dump(configs[mid])
         assert isinstance(dumped, dict)
-        leaves = _iter_leaves([str(mid)], dumped)
+        leaves = _iter_leaves([*_MICROGRID_PREFIX, str(mid)], dumped)
         if not leaves:
             continue
-        if doc.body:
-            doc.add(tomlkit.nl())
+        doc.add(tomlkit.nl())
         for path, value in leaves:
             doc.append(tomlkit.key(path), _format_value(value))
     return tomlkit.dumps(doc)

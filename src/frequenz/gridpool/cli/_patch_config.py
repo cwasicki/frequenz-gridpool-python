@@ -17,7 +17,7 @@ from tomlkit import TOMLDocument
 
 from frequenz.gridpool.config import MicrogridConfig
 
-from ._dump_config import _format_value, _iter_leaves
+from ._dump_config import _MICROGRID_PREFIX, _format_value, _iter_leaves
 
 
 def patch_file(path: Path, configs: dict[int, MicrogridConfig]) -> str:
@@ -59,7 +59,7 @@ def patch_text(original: str, configs: dict[int, MicrogridConfig]) -> str:
         if not leaves:
             continue
 
-        if mid not in doc:
+        if not _entry_exists(doc, mid):
             _append_new_entry(doc, mid, leaves)
             continue
 
@@ -75,10 +75,15 @@ def patch_text(original: str, configs: dict[int, MicrogridConfig]) -> str:
     return text
 
 
+def _entry_exists(doc: TOMLDocument, mid: str) -> bool:
+    """Whether the microgrid `mid` already has an entry in `doc`."""
+    return _leaf_exists(doc, mid, [])
+
+
 def _leaf_exists(doc: TOMLDocument, mid: str, path: list[str]) -> bool:
-    """Whether the dotted key `mid.path...` already has a value in `doc`."""
+    """Whether the dotted key `assets.microgrids.mid.path...` has a value in `doc`."""
     node: Any = doc
-    for key in (mid, *path):
+    for key in (*_MICROGRID_PREFIX, mid, *path):
         if not isinstance(node, Mapping) or key not in node:
             return False
         node = node[key]
@@ -100,14 +105,14 @@ def _insert_leaf(doc: TOMLDocument, mid: str, path: list[str], value: Any) -> bo
     """
     node: Any = doc
     matched = 0
-    for key in (mid, *path[:-1]):
+    full_path = [*_MICROGRID_PREFIX, mid, *path]
+    for key in full_path[:-1]:
         nxt = node[key] if isinstance(node, Mapping) and key in node else None
         if not isinstance(nxt, Mapping):
             break
         node = nxt
         matched += 1
 
-    full_path = [mid, *path]
     if matched != len(full_path) - 1:
         return False
     node[full_path[-1]] = _format_value(value)
@@ -128,14 +133,14 @@ def _append_new_entry(
     if doc.body:
         doc.add(tomlkit.nl())
     for path, value in leaves:
-        doc.append(tomlkit.key([mid, *path]), _format_value(value))
+        doc.append(tomlkit.key([*_MICROGRID_PREFIX, mid, *path]), _format_value(value))
 
 
 def _render_lines(mid: str, leaves: list[tuple[list[str], Any]]) -> list[str]:
-    """Render `(path, value)` leaves as standalone `mid.path = value` lines."""
+    """Render leaves as standalone `assets.microgrids.mid.path = value` lines."""
     tmp = tomlkit.document()
     for path, value in leaves:
-        tmp.append(tomlkit.key([mid, *path]), _format_value(value))
+        tmp.append(tomlkit.key([*_MICROGRID_PREFIX, mid, *path]), _format_value(value))
     return tomlkit.dumps(tmp).splitlines(keepends=True)
 
 
@@ -159,8 +164,8 @@ def _splice_orphans(text: str, orphans: dict[str, list[tuple[list[str], Any]]]) 
 
 
 def _last_line_index_for_mid(lines: list[str], mid: str) -> int:
-    """Index of the last line belonging to `mid` (its key starts with `mid.`)."""
-    prefix = f"{mid}."
+    """Index of the last line belonging to `mid` (its key starts with the prefix)."""
+    prefix = f"{'.'.join(_MICROGRID_PREFIX)}.{mid}."
     for idx in range(len(lines) - 1, -1, -1):
         if lines[idx].lstrip().startswith(prefix):
             return idx

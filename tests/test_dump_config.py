@@ -26,13 +26,16 @@ def test_dump_map_round_trips() -> None:
         )
     }
 
-    parsed = tomllib.loads(dump_map(configs))
+    parsed = tomllib.loads(dump_map(configs))["assets"]
 
-    assert parsed["10"]["microgrid_id"] == 10
-    assert parsed["10"]["name"] == "Demo"
-    assert parsed["10"]["latitude"] == 52.5
-    assert parsed["10"]["ctype"]["pv"]["meter"] == [2]
-    assert parsed["10"]["ctype"]["pv"]["formula"]["AC_POWER_ACTIVE"] == "#2"
+    assert parsed["version"] == 1
+    assert parsed["microgrids"]["10"]["microgrid_id"] == 10
+    assert parsed["microgrids"]["10"]["name"] == "Demo"
+    assert parsed["microgrids"]["10"]["latitude"] == 52.5
+    assert parsed["microgrids"]["10"]["ctype"]["pv"]["meter"] == [2]
+    assert (
+        parsed["microgrids"]["10"]["ctype"]["pv"]["formula"]["AC_POWER_ACTIVE"] == "#2"
+    )
 
 
 def test_dump_map_omits_empty_and_none() -> None:
@@ -41,12 +44,12 @@ def test_dump_map_omits_empty_and_none() -> None:
 
     text = dump_map(configs)
 
-    assert text == "7.microgrid_id = 7\n"
+    assert text == "assets.version = 1\n\nassets.microgrids.7.microgrid_id = 7\n"
 
 
 def test_dump_map_empty() -> None:
-    """An empty mapping serializes to an empty string."""
-    assert dump_map({}) == ""
+    """An empty mapping serializes to just the version stamp."""
+    assert dump_map({}) == "assets.version = 1\n"
 
 
 def test_dump_map_renders_whole_floats_as_underscored_ints() -> None:
@@ -61,7 +64,7 @@ def test_dump_map_renders_whole_floats_as_underscored_ints() -> None:
 
     text = dump_map(configs)
 
-    assert "10.pv.1.peak_power = 1_736_680\n" in text
-    assert "10.pv.1.rated_power = 1_400_000\n" in text
+    assert "assets.microgrids.10.pv.1.peak_power = 1_736_680\n" in text
+    assert "assets.microgrids.10.pv.1.rated_power = 1_400_000\n" in text
     # Genuinely fractional floats are left alone.
-    assert "10.latitude = 52.5\n" in text
+    assert "assets.microgrids.10.latitude = 52.5\n" in text
