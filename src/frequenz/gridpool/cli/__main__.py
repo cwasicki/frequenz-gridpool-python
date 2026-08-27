@@ -289,7 +289,10 @@ async def generate_config(  # pylint: disable=too-many-locals
 
     if inplace:
         assert default_file is not None
-        patched = patch_file(default_file, configs, fill_missing=fill_missing)
+        try:
+            patched = patch_file(default_file, configs, fill_missing=fill_missing)
+        except ValueError as exc:
+            raise click.ClickException(str(exc)) from exc
         fd, tmp_name = tempfile.mkstemp(
             dir=default_file.parent, prefix=f".{default_file.name}."
         )

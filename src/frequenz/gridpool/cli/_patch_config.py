@@ -53,6 +53,7 @@ def patch_text(
         The patched TOML text.
     """
     doc = tomlkit.parse(original)
+    _reject_legacy_layout(doc)
     schema = MicrogridConfig.Schema()
 
     # Leaves needing a whole new sub-table can't be inserted via item assignment
@@ -82,6 +83,37 @@ def patch_text(
     if orphans:
         text = _splice_orphans(text, orphans)
     return text
+
+
+def _reject_legacy_layout(doc: TOMLDocument) -> None:
+    """Refuse a document that is not in the current `assets.microgrids` layout.
+
+    Patching navigates by `assets.microgrids.<id>`, so a top-level or
+    `meta`-nested entry would be duplicated rather than edited. Such a file
+    must be rebuilt with `generate-config` (without `--inplace`) first.
+
+    Args:
+        doc: The parsed document to check.
+
+    Raises:
+        ValueError: If the document uses a deprecated layout.
+    """
+    hint = "rebuild it with generate-config (without --inplace) first"
+    if stray := sorted(k for k in doc if k != "assets"):
+        raise ValueError(
+            f"Cannot patch in place: deprecated top-level keys {stray}; {hint}."
+        )
+    microgrids = doc.get("assets", {}).get("microgrids", {})
+    metas = sorted(
+        mid
+        for mid, entry in microgrids.items()
+        if isinstance(entry, Mapping) and "meta" in entry
+    )
+    if metas:
+        raise ValueError(
+            f"Cannot patch in place: microgrids {metas} nest fields under the "
+            f"deprecated `meta` table; {hint}."
+        )
 
 
 def _entry_exists(doc: TOMLDocument, mid: str) -> bool:

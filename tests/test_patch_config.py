@@ -3,6 +3,8 @@
 
 """Tests for in-place patching of existing dotted-key TOML config files."""
 
+import pytest
+
 from frequenz.gridpool.cli._patch_config import patch_text
 from frequenz.gridpool.config import (
     ComponentTypeConfig,
@@ -138,6 +140,22 @@ def test_patch_inserts_new_subtables_for_multiple_microgrids() -> None:
         + 1
     ] == ("assets.microgrids.40.pv.2.peak_power = 50_000")
     assert lines[-1] == "assets.microgrids.41.ctype.grid.meter = [1]"
+
+
+def test_patch_refuses_top_level_layout() -> None:
+    """A deprecated top-level file is refused, not duplicated into the new layout."""
+    with pytest.raises(ValueError, match="top-level"):
+        patch_text("1.microgrid_id = 1\n", {1: MicrogridConfig(microgrid_id=1)})
+
+
+def test_patch_refuses_meta_layout() -> None:
+    """A file nesting fields under `meta` is refused rather than patched alongside it."""
+    original = (
+        "assets.microgrids.1.microgrid_id = 1\n"
+        'assets.microgrids.1.meta.name = "Old"\n'
+    )
+    with pytest.raises(ValueError, match="meta"):
+        patch_text(original, {1: MicrogridConfig(microgrid_id=1)})
 
 
 def test_patch_formats_new_numeric_leaves() -> None:
