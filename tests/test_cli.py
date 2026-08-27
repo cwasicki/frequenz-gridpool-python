@@ -144,6 +144,29 @@ def test_graph_config_is_none_without_the_flag() -> None:
     assert _graph_config(False) is None
 
 
+async def test_inplace_refuses_to_write_an_invalid_patch() -> None:
+    """A patch that yields invalid TOML must not overwrite the target file."""
+    with CliRunner().isolated_filesystem():
+        original = "assets.microgrids.10.microgrid_id = 10\n"
+        Path("cfg.toml").write_text(original, encoding="utf-8")
+        with (
+            patch("frequenz.gridpool.cli.__main__.AssetsApiClient", _patched_client()),
+            patch(
+                "frequenz.gridpool.cli.__main__.patch_file",
+                return_value="this is = = not valid toml",
+            ),
+        ):
+            result = await CliRunner().invoke(
+                cli,
+                ["generate-config", "10", "--inplace", "--default", "cfg.toml"],
+                env=_ENV,
+            )
+
+        assert result.exit_code != 0, result.output
+        assert "invalid" in result.output.lower()
+        assert Path("cfg.toml").read_text(encoding="utf-8") == original
+
+
 async def test_validate_accepts_a_valid_stack() -> None:
     """A well-formed document validates with a zero exit code."""
     with CliRunner().isolated_filesystem():

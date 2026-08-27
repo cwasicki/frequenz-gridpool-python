@@ -4,8 +4,9 @@
 """Patch existing dotted-key TOML files with new microgrid config values.
 
 Unlike `dump_map`, which rebuilds a TOML document from scratch, this module
-only adds missing leaves and missing microgrid entries. Values already on
-disk always win, so comments, field order and number formatting survive.
+edits the document in place, so its comments, field order and number formatting
+survive. By default it refreshes the managed leaves, overwriting them; with
+`fill_missing` it only adds the leaves the document lacks.
 """
 
 from collections.abc import Mapping
@@ -20,25 +21,33 @@ from frequenz.gridpool.config import MicrogridConfig
 from ._dump_config import _MICROGRID_PREFIX, _format_value, _iter_leaves
 
 
-def patch_file(path: Path, configs: dict[int, MicrogridConfig]) -> str:
-    """Patch the TOML file at `path` with any leaves missing from `configs`.
+def patch_file(
+    path: Path, configs: dict[int, MicrogridConfig], *, fill_missing: bool = False
+) -> str:
+    """Patch the TOML file at `path` with the values in `configs`.
 
     Args:
         path: Path to the existing TOML file to patch.
         configs: Mapping from microgrid ID to `MicrogridConfig`.
+        fill_missing: Only add leaves the file lacks, leaving existing values
+            untouched; by default the managed leaves are overwritten.
 
     Returns:
         The patched TOML text; the caller is responsible for writing it back.
     """
-    return patch_text(path.read_text(), configs)
+    return patch_text(path.read_text(), configs, fill_missing=fill_missing)
 
 
-def patch_text(original: str, configs: dict[int, MicrogridConfig]) -> str:
-    """Patch dotted-key TOML text with any leaves missing from `configs`.
+def patch_text(
+    original: str, configs: dict[int, MicrogridConfig], *, fill_missing: bool = False
+) -> str:
+    """Patch dotted-key TOML text with the values in `configs`.
 
     Args:
         original: The existing TOML text to patch.
         configs: Mapping from microgrid ID to `MicrogridConfig`.
+        fill_missing: Only add leaves the text lacks, leaving existing values
+            untouched; by default the managed leaves are overwritten.
 
     Returns:
         The patched TOML text.
@@ -64,7 +73,7 @@ def patch_text(original: str, configs: dict[int, MicrogridConfig]) -> str:
             continue
 
         for path, value in leaves:
-            if _leaf_exists(doc, mid, path):
+            if fill_missing and _leaf_exists(doc, mid, path):
                 continue
             if not _insert_leaf(doc, mid, path, value):
                 orphans.setdefault(mid, []).append((path, value))

@@ -24,8 +24,8 @@ assets.microgrids.40.pv.1.rated_power = 480_000 # https://example.com/technische
 """
 
 
-def test_patch_is_a_noop_when_nothing_changed() -> None:
-    """Patching with values already on disk leaves the file byte-identical."""
+def test_fill_missing_is_a_noop_when_nothing_changed() -> None:
+    """With `fill_missing`, values already on disk leave the file byte-identical."""
     configs = {
         40: MicrogridConfig(
             microgrid_id=40,
@@ -34,7 +34,31 @@ def test_patch_is_a_noop_when_nothing_changed() -> None:
         )
     }
 
-    assert patch_text(_ORIGINAL, configs) == _ORIGINAL
+    assert patch_text(_ORIGINAL, configs, fill_missing=True) == _ORIGINAL
+
+
+def test_patch_overwrites_existing_leaf_by_default() -> None:
+    """By default a managed leaf already on disk is refreshed to the new value."""
+    configs = {
+        40: MicrogridConfig(microgrid_id=40, pv={"1": PVConfig(rated_power=500_000.0)})
+    }
+
+    patched = patch_text(_ORIGINAL, configs)
+
+    assert "assets.microgrids.40.pv.1.rated_power = 500_000" in patched
+    assert "480_000" not in patched
+
+
+def test_fill_missing_keeps_an_existing_leaf() -> None:
+    """With `fill_missing`, an existing leaf keeps its on-disk value."""
+    configs = {
+        40: MicrogridConfig(microgrid_id=40, pv={"1": PVConfig(rated_power=500_000.0)})
+    }
+
+    patched = patch_text(_ORIGINAL, configs, fill_missing=True)
+
+    assert "assets.microgrids.40.pv.1.rated_power = 480_000" in patched
+    assert "500_000" not in patched
 
 
 def test_patch_inserts_missing_leaf_next_to_existing_table() -> None:

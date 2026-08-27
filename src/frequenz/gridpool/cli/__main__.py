@@ -199,9 +199,16 @@ async def render_graph(microgrid_id: int, output: str, show: bool) -> None:
     "--inplace",
     is_flag=True,
     default=False,
-    help="Patch --default in place instead of printing to stdout. Preserves "
-    "existing comments, ordering and formatting in that file; only fills in "
-    "values it is missing. Requires --default.",
+    help="Patch --default in place instead of printing to stdout, refreshing "
+    "the managed values while keeping its comments, ordering and formatting. "
+    "Requires --default.",
+)
+@click.option(
+    "--fill-missing",
+    is_flag=True,
+    default=False,
+    help="With --inplace, only add values --default is missing, leaving the "
+    "values already in it untouched.",
 )
 @click.option(
     "--prefer-meters-in-component-formulas",
@@ -210,11 +217,13 @@ async def render_graph(microgrid_id: int, output: str, show: bool) -> None:
     help="Read the meter before the component in the per-category formulas. "
     "This is the order used before component graph v0.5.0.",
 )
-async def generate_config(
+async def generate_config(  # pylint: disable=too-many-locals
     microgrid_ids: tuple[int, ...],
+    *,
     default_file: Path | None,
     override_file: Path | None,
     inplace: bool,
+    fill_missing: bool,
     prefer_meters_in_component_formulas: bool,
 ) -> None:
     """Generate microgrid config from the Assets API as TOML.
@@ -232,13 +241,15 @@ async def generate_config(
     component graph v0.5.0.
 
     With `--inplace`, `--default` is patched directly instead: candidate values
-    come from the Assets API (with `--override` layered on top), and only
-    leaves `--default` is missing are added, preserving its existing comments,
-    field order and formatting. If no microgrid IDs are given, every microgrid
-    already in `--default` is processed.
+    come from the Assets API (with `--override` layered on top) and refresh the
+    managed values, keeping the file's comments, field order and formatting.
+    With `--fill-missing`, only values `--default` lacks are added. If no
+    microgrid IDs are given, every microgrid already in `--default` is processed.
     """
     if inplace and default_file is None:
         raise click.ClickException("--inplace requires --default.")
+    if fill_missing and not inplace:
+        raise click.ClickException("--fill-missing requires --inplace.")
 
     url, key, secret = _assets_credentials()
 
@@ -278,13 +289,22 @@ async def generate_config(
 
     if inplace:
         assert default_file is not None
-        patched = patch_file(default_file, configs)
+        patched = patch_file(default_file, configs, fill_missing=fill_missing)
         fd, tmp_name = tempfile.mkstemp(
             dir=default_file.parent, prefix=f".{default_file.name}."
         )
         try:
             with os.fdopen(fd, "w") as tmp_file:
                 tmp_file.write(patched)
+            # Guard against a patch that corrupts the file (e.g. bad splicing)
+            # before it overwrites the user's config.
+            try:
+                AssetsConfig.load_from_files(Path(tmp_name), check=False)
+            except _LOAD_ERRORS as exc:
+                raise click.ClickException(
+                    f"Refusing to write {default_file}: the patched result is "
+                    f"invalid: {exc}"
+                ) from exc
             os.replace(tmp_name, default_file)
         except BaseException:
             os.remove(tmp_name)
