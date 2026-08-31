@@ -11,6 +11,8 @@ from typing import Any, ClassVar, Literal, Self, Type, cast, get_args
 from marshmallow import Schema
 from marshmallow_dataclass import dataclass
 
+from ._fields import toml_datetime_metadata
+
 ComponentType = Literal["grid", "pv", "battery", "consumption", "chp", "ev"]
 """Valid component types."""
 
@@ -98,10 +100,10 @@ class ComponentTypeConfig:
 class PVConfig:
     """Configuration of a PV system in a microgrid."""
 
-    start_time: datetime | None = None
+    start_time: datetime | None = field(default=None, metadata=toml_datetime_metadata())
     """Start time of the PV system installation."""
 
-    end_time: datetime | None = None
+    end_time: datetime | None = field(default=None, metadata=toml_datetime_metadata())
     """End time of the PV system installation."""
 
     peak_power: float | None = None
@@ -119,10 +121,10 @@ class WindConfig:
     # pylint: disable=too-many-instance-attributes
     """Configuration of a wind turbine in a microgrid."""
 
-    start_time: datetime | None = None
+    start_time: datetime | None = field(default=None, metadata=toml_datetime_metadata())
     """Start time of the wind turbine installation."""
 
-    end_time: datetime | None = None
+    end_time: datetime | None = field(default=None, metadata=toml_datetime_metadata())
     """End time of the wind turbine installation."""
 
     turbine_model: str | None = None
@@ -151,10 +153,10 @@ class WindConfig:
 class BatteryConfig:
     """Configuration of a battery in a microgrid."""
 
-    start_time: datetime | None = None
+    start_time: datetime | None = field(default=None, metadata=toml_datetime_metadata())
     """Start time of the battery installation."""
 
-    end_time: datetime | None = None
+    end_time: datetime | None = field(default=None, metadata=toml_datetime_metadata())
     """End time of the battery installation."""
 
     capacity: float | None = None
@@ -187,10 +189,10 @@ class MicrogridConfig:
     altitude: float | None = None
     """Geographic altitude of the microgrid."""
 
-    start_time: datetime | None = None
+    start_time: datetime | None = field(default=None, metadata=toml_datetime_metadata())
     """Start time of the microgrid operation."""
 
-    end_time: datetime | None = None
+    end_time: datetime | None = field(default=None, metadata=toml_datetime_metadata())
     """End time of the microgrid operation."""
 
     pv: dict[str, PVConfig] | None = None

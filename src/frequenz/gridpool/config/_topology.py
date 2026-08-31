@@ -26,6 +26,8 @@ from frequenz.client.assets import (
 from marshmallow import Schema
 from marshmallow_dataclass import dataclass
 
+from ._fields import toml_datetime_metadata
+
 _EIC_ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-"
 _MARKET_AREA_EU_DE = 101
 
@@ -165,10 +167,10 @@ class ValidityConfig:
     participation: MarketParticipationType | None = None
     """The market use case, unset for a plain validity window."""
 
-    start: datetime | None = None
+    start: datetime | None = field(default=None, metadata=toml_datetime_metadata())
     """Inclusive start of the period."""
 
-    end: datetime | None = None
+    end: datetime | None = field(default=None, metadata=toml_datetime_metadata())
     """Exclusive end of the period."""
 
     Schema: ClassVar[Type[Schema]] = Schema

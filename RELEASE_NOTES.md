@@ -40,3 +40,10 @@ validate, patch, and query merged config files.
 - `generate-config --inplace` refreshes managed values while preserving
   formatting; `--fill-missing` only adds absent values. Generated patches are
   validated before writing.
+
+## Bug Fixes
+
+- Config files with validity periods now load under marshmallow 3, not only
+  marshmallow 4. `tomllib` yields native `datetime` objects, which marshmallow
+  3's `DateTime` field rejected. `marshmallow` is now a direct dependency so the
+  minimum-version test exercises this path.

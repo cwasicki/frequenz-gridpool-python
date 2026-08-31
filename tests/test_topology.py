@@ -575,6 +575,27 @@ def test_period_and_query_require_a_utc_offset() -> None:
         relation.covers(naive)
 
 
+def test_validity_accepts_datetime_objects_and_iso_strings() -> None:
+    """A period loads from native datetimes, as `tomllib` yields, or ISO strings."""
+    aware = datetime(2026, 1, 1, tzinfo=timezone.utc)
+
+    from_objects = ValidityConfig.Schema().load(
+        {"start": aware, "end": aware.replace(month=6)}
+    )
+    assert isinstance(from_objects, ValidityConfig)
+    assert from_objects.start == aware
+
+    from_strings = ValidityConfig.Schema().load(
+        {"start": "2026-01-01T00:00:00+00:00", "end": "2026-06-01T00:00:00+00:00"}
+    )
+    assert isinstance(from_strings, ValidityConfig)
+    assert from_strings.start == aware
+
+    naive = datetime(2026, 1, 1)  # noqa: DTZ001
+    with pytest.raises(ValueError, match="UTC offset"):
+        ValidityConfig.Schema().load({"start": naive})
+
+
 def test_market_location_properties() -> None:
     """A location identifies its market and how to read its identifier."""
     config = _load(
